@@ -20,10 +20,9 @@ class MakeCrudCommand extends Command
         $name = $this->ask('What is the Model name? (e.g., Product)');
         $name = ucfirst($name);
 
-        // Define the paths
+        $migrationSchema = $this->getFieldsInteraction(); // get fields for migration
+
         $stubPath = __DIR__ . '/../Stubs/model.stub';
-        
-        // base_path() points to the root of the Laravel application where this package is installed
         $destinationPath = base_path("app/Models/{$name}.php");
 
         if (File::exists($destinationPath)) {
@@ -40,20 +39,50 @@ class MakeCrudCommand extends Command
         // --- MIGRATION GENERATION ---
 
         $tableName = Str::lower(Str::plural($name));
-        
-        // generate timestamp for migration file name
         $timestamp = date('Y_m_d_His');
         $migrationFileName = "{$timestamp}_create_{$tableName}_table.php";
         
-        // Define paths
         $migrationStubPath = __DIR__ . '/../Stubs/migration.stub';
         $migrationPath = base_path("database/migrations/{$migrationFileName}");
 
         // Read Stub and Replace
         $migrationContent = File::get($migrationStubPath);
         $migrationContent = str_replace('{{tableName}}', $tableName, $migrationContent);
+        $migrationContent = str_replace('{{fields}}', $migrationSchema, $migrationContent);
         File::put($migrationPath, $migrationContent);
 
         $this->info("Migration {$migrationFileName} created successfully!");
+    }
+
+    /**
+     * Ask the user for fields and types interactively.
+     * Returns a string formatted for the migration file.
+     */
+
+    private function getfieldsInteraction(): string{
+        $fieldsString = "";
+        
+        $this->info("Let's define the fields for your table!");
+
+        while (true) {
+            $fieldName = $this->ask('Field name (leave empty to finish)');
+            
+            if (empty($fieldName)) {
+                break;
+            }
+
+            //Ask for field type using a selector
+            $type = $this->choice(
+                "What is the type for '{$fieldName}'?", 
+                ['string', 'integer', 'text', 'boolean', 'date', 'decimal'],
+                0 // default to string
+            );
+
+            // Construct the Laravel migration syntax 
+            // Example result: $table->string('title');
+            $fieldsString .= "\$table->{$type}('{$fieldName}');\n            ";
+        }
+
+        return $fieldsString;
     }
 }
