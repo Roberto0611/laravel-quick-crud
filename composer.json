@@ -1,0 +1,30 @@
+{
+    "name": "roc0611/laravel-quick-crud",
+    "description": "Generate Models, Migrations, Controllers and Views interactively.",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Roberto Ochoa",
+            "email": "ochoacuevasr@gmail.com"
+        }
+    ],
+    "require": {
+        "php": "^8.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "Roc0611\\QuickCrud\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Roc0611\\QuickCrud\\QuickCrudServiceProvider"
+            ]
+        }
+    },
+    "require-dev": {
+        "orchestra/testbench": "^9.15"
+    }
+}
