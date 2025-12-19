@@ -10,17 +10,16 @@ class MakeCrudCommand extends Command
 {
     protected $signature = 'quick:crud';
     protected $description = 'Create a new CRUD (Model, Migration, Controller, Views)';
+    protected $fields = []; 
 
     public function handle()
     {
-
         // --- MODEL GENERATION ---
         
-        // Ask for the model name )
         $name = $this->ask('What is the Model name? (e.g., Product)');
         $name = ucfirst($name);
 
-        $migrationSchema = $this->getFieldsInteraction(); // get fields for migration
+        $migrationSchema = $this->getFieldsInteraction(); 
 
         $stubPath = __DIR__ . '/../Stubs/model.stub';
         $destinationPath = base_path("app/Models/{$name}.php");
@@ -30,7 +29,6 @@ class MakeCrudCommand extends Command
             return;
         }
 
-        // Read the Stub file content
         $content = File::get($stubPath);
         $content = str_replace('{{modelName}}', $name, $content);
         File::put($destinationPath, $content);
@@ -45,7 +43,6 @@ class MakeCrudCommand extends Command
         $migrationStubPath = __DIR__ . '/../Stubs/migration.stub';
         $migrationPath = base_path("database/migrations/{$migrationFileName}");
 
-        // Read Stub and Replace
         $migrationContent = File::get($migrationStubPath);
         $migrationContent = str_replace('{{tableName}}', $tableName, $migrationContent);
         $migrationContent = str_replace('{{fields}}', $migrationSchema, $migrationContent);
@@ -55,7 +52,6 @@ class MakeCrudCommand extends Command
 
         // --- CONTROLLER GENERATION ---
 
-        // variables for controller stub
         $variablePlural = Str::camel(Str::plural($name)); 
         $variableSingular = Str::camel($name);
         $viewFolder = $tableName;
@@ -66,18 +62,8 @@ class MakeCrudCommand extends Command
         $controllerContent = File::get($controllerStubPath);
 
         $controllerContent = str_replace(
-            [
-                '{{modelName}}', 
-                '{{variablePlural}}', 
-                '{{variableSingular}}', 
-                '{{viewFolder}}'
-            ], 
-            [
-                $name, 
-                $variablePlural, 
-                $variableSingular, 
-                $viewFolder
-            ], 
+            ['{{modelName}}', '{{variablePlural}}', '{{variableSingular}}', '{{viewFolder}}'], 
+            [$name, $variablePlural, $variableSingular, $viewFolder], 
             $controllerContent
         );
 
@@ -86,17 +72,20 @@ class MakeCrudCommand extends Command
         $this->info("Controller {$name}Controller created successfully!");
 
         // --- ROUTE GENERATION ---
+
         $routeLine = "\nRoute::resource('{$tableName}', \App\Http\Controllers\\{$name}Controller::class);";
         File::append(base_path('routes/web.php'), $routeLine);
         $this->info("Route for {$tableName} added to web.php!");
+
+        // --- VIEW GENERATION ---
+
+        $this->generateViews($name); 
     }
 
     /**
-     * Ask the user for fields and types interactively.
-     * Returns a string formatted for the migration file.
+     * Ask the user for fields interactively.
      */
-
-    private function getfieldsInteraction(): string{
+    private function getFieldsInteraction(): string {
         $fieldsString = "";
         
         $this->info("Let's define the fields for your table!");
@@ -108,18 +97,129 @@ class MakeCrudCommand extends Command
                 break;
             }
 
-            //Ask for field type using a selector
+            // check for duplicate field names
+            $exists = false;
+            foreach ($this->fields as $field) {
+                if ($field['name'] === $fieldName) {
+                    $exists = true;
+                    break;
+                }
+            }
+
+            if ($exists) {
+                $this->error("The field '{$fieldName}' already exists! Try another name.");
+                continue; // Reinicia el ciclo sin guardar nada
+            }
+
             $type = $this->choice(
                 "What is the type for '{$fieldName}'?", 
                 ['string', 'integer', 'text', 'boolean', 'date', 'decimal'],
-                0 // default to string
+                0 
             );
 
-            // Construct the Laravel migration syntax 
-            // Example result: $table->string('title');
+            $this->fields[] = ['name' => $fieldName, 'type' => $type];
+
             $fieldsString .= "\$table->{$type}('{$fieldName}');\n            ";
         }
 
         return $fieldsString;
+    }
+
+    /**
+     * Generate Blade Views with Tailwind CSS
+     */
+    private function generateViews($name)
+    {
+        $tableName = Str::lower(Str::plural($name)); 
+        $viewFolder = $tableName;
+        $variableSingular = Str::camel($name); 
+
+        // 1. Create folder resources/views/name
+        $path = base_path("resources/views/{$viewFolder}");
+        if (!File::exists($path)) {
+            File::makeDirectory($path, 0755, true);
+        }
+
+        // 2. Generate dynamic HTML based on $this->fields
+        $tableHeaders = "";
+        $tableBody = "";
+        $formFields = "";
+        $formFieldsEdit = "";
+
+        foreach ($this->fields as $field) {
+            $fn = $field['name'];
+            $ucFn = ucfirst($fn);
+
+            // For Index (Table)
+            $tableHeaders .= "<th scope=\"col\" class=\"px-6 py-3\">{$ucFn}</th>\n                                    ";
+            $tableBody .= "<td class=\"px-6 py-4\">{{ \${$variableSingular}->{$fn} }}</td>\n                                    ";
+
+            // For Forms (Create/Edit)
+            $formFields .= $this->getTailwindInput($field['type'], $fn, $variableSingular, false);
+            $formFieldsEdit .= $this->getTailwindInput($field['type'], $fn, $variableSingular, true);
+        }
+
+        // 3. Create physical files
+        $views = ['index', 'create', 'edit'];
+        foreach ($views as $view) {
+            // Ensure these stubs exist in src/Stubs/views/
+            $stubContent = File::get(__DIR__ . "/../Stubs/views/{$view}.stub");
+            
+            // Generic replacements
+            $content = str_replace(
+                ['{{modelName}}', '{{variablePlural}}', '{{variableSingular}}', '{{viewFolder}}'],
+                [$name, $tableName, $variableSingular, $viewFolder],
+                $stubContent
+            );
+
+            // Specific HTML replacements
+            if ($view === 'index') {
+                $content = str_replace(['{{tableHeaders}}', '{{tableBody}}'], [$tableHeaders, $tableBody], $content);
+            } elseif ($view === 'create') {
+                $content = str_replace('{{formFields}}', $formFields, $content);
+            } elseif ($view === 'edit') {
+                $content = str_replace('{{formFields}}', $formFieldsEdit, $content);
+            }
+
+            File::put("{$path}/{$view}.blade.php", $content);
+        }
+
+        $this->info("Views (Tailwind) generated in resources/views/{$viewFolder}");
+    }
+
+   /**
+     * Helper to generate Tailwind HTML based on the data type.
+     */
+    private function getTailwindInput($type, $name, $variableSingular, $isEdit)
+    {
+        $label = ucfirst($name);
+        
+        // If it's Edit mode, use the model value; otherwise, use old() helper
+        $valueAttr = $isEdit 
+            ? "old('{$name}', \${$variableSingular}->{$name})" 
+            : "old('{$name}')";
+
+        $html = "
+        <div class=\"mb-4\">
+            <label for=\"{$name}\" class=\"block font-medium text-sm text-gray-700\">{$label}</label>";
+
+        if ($type === 'text') {
+            // Textarea for long text fields
+            $html .= "
+            <textarea id=\"{$name}\" name=\"{$name}\" rows=\"4\" class=\"border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm block mt-1 w-full\" required>{$valueAttr}</textarea>";
+        } else {
+            // Standard Input for everything else (dates, strings, etc.)
+            $inputType = ($type === 'date') ? 'date' : 'text';
+            $html .= "
+            <input id=\"{$name}\" type=\"{$inputType}\" name=\"{$name}\" value=\"{{ {$valueAttr} }}\" class=\"border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm block mt-1 w-full\" required />";
+        }
+
+        $html .= "
+            @error('{$name}')
+                <p class=\"text-red-500 text-xs mt-1\">{{ \$message }}</p>
+            @enderror
+        </div>";
+
+        return $html;
     }
 }
