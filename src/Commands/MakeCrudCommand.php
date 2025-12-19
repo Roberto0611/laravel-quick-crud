@@ -80,10 +80,15 @@ class MakeCrudCommand extends Command
             ], 
             $controllerContent
         );
-        
+
         File::put($controllerPath, $controllerContent);
 
         $this->info("Controller {$name}Controller created successfully!");
+
+        // --- ROUTE GENERATION ---
+        $routeLine = "\nRoute::resource('{$tableName}', \App\Http\Controllers\\{$name}Controller::class);";
+        File::append(base_path('routes/web.php'), $routeLine);
+        $this->info("Route for {$tableName} added to web.php!");
     }
 
     /**
