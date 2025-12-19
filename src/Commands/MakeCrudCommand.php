@@ -52,6 +52,38 @@ class MakeCrudCommand extends Command
         File::put($migrationPath, $migrationContent);
 
         $this->info("Migration {$migrationFileName} created successfully!");
+
+        // --- CONTROLLER GENERATION ---
+
+        // variables for controller stub
+        $variablePlural = Str::camel(Str::plural($name)); 
+        $variableSingular = Str::camel($name);
+        $viewFolder = $tableName;
+
+        $controllerStubPath = __DIR__ . '/../Stubs/controller.stub';
+        $controllerPath = base_path("app/Http/Controllers/{$name}Controller.php");
+
+        $controllerContent = File::get($controllerStubPath);
+
+        $controllerContent = str_replace(
+            [
+                '{{modelName}}', 
+                '{{variablePlural}}', 
+                '{{variableSingular}}', 
+                '{{viewFolder}}'
+            ], 
+            [
+                $name, 
+                $variablePlural, 
+                $variableSingular, 
+                $viewFolder
+            ], 
+            $controllerContent
+        );
+        
+        File::put($controllerPath, $controllerContent);
+
+        $this->info("Controller {$name}Controller created successfully!");
     }
 
     /**
