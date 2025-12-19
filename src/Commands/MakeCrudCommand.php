@@ -4,6 +4,7 @@ namespace Roc0611\QuickCrud\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 
 class MakeCrudCommand extends Command
 {
@@ -12,6 +13,9 @@ class MakeCrudCommand extends Command
 
     public function handle()
     {
+
+        // --- MODEL GENERATION ---
+        
         // Ask for the model name )
         $name = $this->ask('What is the Model name? (e.g., Product)');
         $name = ucfirst($name);
@@ -32,5 +36,24 @@ class MakeCrudCommand extends Command
         $content = str_replace('{{modelName}}', $name, $content);
         File::put($destinationPath, $content);
         $this->info("Model {$name} successfully created in app/Models!");
+
+        // --- MIGRATION GENERATION ---
+
+        $tableName = Str::lower(Str::plural($name));
+        
+        // generate timestamp for migration file name
+        $timestamp = date('Y_m_d_His');
+        $migrationFileName = "{$timestamp}_create_{$tableName}_table.php";
+        
+        // Define paths
+        $migrationStubPath = __DIR__ . '/../Stubs/migration.stub';
+        $migrationPath = base_path("database/migrations/{$migrationFileName}");
+
+        // Read Stub and Replace
+        $migrationContent = File::get($migrationStubPath);
+        $migrationContent = str_replace('{{tableName}}', $tableName, $migrationContent);
+        File::put($migrationPath, $migrationContent);
+
+        $this->info("Migration {$migrationFileName} created successfully!");
     }
 }
