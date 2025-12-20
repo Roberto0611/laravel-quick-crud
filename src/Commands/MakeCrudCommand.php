@@ -152,7 +152,7 @@ class MakeCrudCommand extends Command
 
             // For Index (Table)
             $tableHeaders .= "<th scope=\"col\" class=\"px-6 py-3\">{$ucFn}</th>\n                                    ";
-            $tableBody .= "<td class=\"px-6 py-4\">{{ \${$variableSingular}->{$fn} }}</td>\n                                    ";
+            $tableBody .= "<td class=\"px-6 py-4 text-gray-900 dark:text-gray-100\">{{ \${$variableSingular}->{$fn} }}</td>\n                                    ";
 
             // For Forms (Create/Edit)
             $formFields .= $this->getTailwindInput($field['type'], $fn, $variableSingular, false);
@@ -200,23 +200,23 @@ class MakeCrudCommand extends Command
             : "old('{$name}')";
 
         $html = "
-        <div class=\"mb-4\">
-            <label for=\"{$name}\" class=\"block font-medium text-sm text-gray-700\">{$label}</label>";
+        <div>
+            <label for=\"{$name}\" class=\"block font-medium text-sm text-gray-700 dark:text-gray-300\">{$label}</label>";
 
         if ($type === 'text') {
             // Textarea for long text fields
             $html .= "
-            <textarea id=\"{$name}\" name=\"{$name}\" rows=\"4\" class=\"border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm block mt-1 w-full\" required>{$valueAttr}</textarea>";
+            <textarea id=\"{$name}\" name=\"{$name}\" rows=\"4\" class=\"border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 focus:border-blue-500 dark:focus:border-blue-500 focus:ring-blue-500 dark:focus:ring-blue-500 rounded-lg shadow-sm block mt-1 w-full\" required>{{ {$valueAttr} }}</textarea>";
         } else {
             // Standard Input for everything else (dates, strings, etc.)
             $inputType = ($type === 'date') ? 'date' : 'text';
             $html .= "
-            <input id=\"{$name}\" type=\"{$inputType}\" name=\"{$name}\" value=\"{{ {$valueAttr} }}\" class=\"border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm block mt-1 w-full\" required />";
+            <input id=\"{$name}\" type=\"{$inputType}\" name=\"{$name}\" value=\"{{ {$valueAttr} }}\" class=\"border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 focus:border-blue-500 dark:focus:border-blue-500 focus:ring-blue-500 dark:focus:ring-blue-500 rounded-lg shadow-sm block mt-1 w-full\" required />";
         }
 
         $html .= "
             @error('{$name}')
-                <p class=\"text-red-500 text-xs mt-1\">{{ \$message }}</p>
+                <p class=\"text-red-500 dark:text-red-400 text-xs mt-1\">{{ \$message }}</p>
             @enderror
         </div>";
 
