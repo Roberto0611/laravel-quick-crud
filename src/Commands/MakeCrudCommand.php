@@ -56,14 +56,16 @@ class MakeCrudCommand extends Command
         $variableSingular = Str::camel($name);
         $viewFolder = $tableName;
 
+        $validationRules = $this->getValidationRules();
+
         $controllerStubPath = __DIR__ . '/../Stubs/controller.stub';
         $controllerPath = base_path("app/Http/Controllers/{$name}Controller.php");
 
         $controllerContent = File::get($controllerStubPath);
 
         $controllerContent = str_replace(
-            ['{{modelName}}', '{{variablePlural}}', '{{variableSingular}}', '{{viewFolder}}'], 
-            [$name, $variablePlural, $variableSingular, $viewFolder], 
+            ['{{modelName}}', '{{variablePlural}}', '{{variableSingular}}', '{{viewFolder}}', '{{validationRules}}'], 
+            [$name, $variablePlural, $variableSingular, $viewFolder, $validationRules], 
             $controllerContent
         );
 
@@ -221,5 +223,35 @@ class MakeCrudCommand extends Command
         </div>";
 
         return $html;
+    }
+
+    /**
+     * Generate Laravel validation rules based on field types.
+     */
+    private function getValidationRules(): string
+    {
+        $rules = "";
+        
+        foreach ($this->fields as $field) {
+            $name = $field['name'];
+            $type = $field['type'];
+
+            // Map standard types to Laravel Validation Rules
+            // Match expression is available since PHP 8.0
+            $rule = match ($type) {
+                'string' => 'required|string|max:255',
+                'text' => 'required|string',
+                'integer' => 'required|integer',
+                'boolean' => 'required|boolean',
+                'date' => 'required|date',
+                'decimal' => 'required|numeric',
+                default => 'required',
+            };
+
+            // Format: 'name' => 'required|string|max:255',
+            $rules .= "'{$name}' => '{$rule}',\n            ";
+        }
+
+        return $rules;
     }
 }

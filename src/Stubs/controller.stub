@@ -12,7 +12,7 @@ class {{modelName}}Controller extends Controller
      */
     public function index()
     {
-        ${{variablePlural}} = {{modelName}}::all();
+        ${{variablePlural}} = {{modelName}}::latest()->paginate(10);
         return view('{{viewFolder}}.index', compact('{{variablePlural}}'));
     }
 
@@ -29,7 +29,11 @@ class {{modelName}}Controller extends Controller
      */
     public function store(Request $request)
     {
-        {{modelName}}::create($request->all());
+        $validated = $request->validate([
+            {{validationRules}}
+        ]);
+
+        {{modelName}}::create($validated);
 
         return redirect()->route('{{viewFolder}}.index')
             ->with('success', '{{modelName}} created successfully.');
@@ -48,7 +52,11 @@ class {{modelName}}Controller extends Controller
      */
     public function update(Request $request, {{modelName}} ${{variableSingular}})
     {
-        ${{variableSingular}}->update($request->all());
+        $validated = $request->validate([
+            {{validationRules}}
+        ]);
+
+        ${{variableSingular}}->update($validated);
 
         return redirect()->route('{{viewFolder}}.index')
             ->with('success', '{{modelName}} updated successfully.');
